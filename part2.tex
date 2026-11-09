@@ -1,0 +1,111 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{hyperref}
+
+\newcommand{\code}{https://github.com/krash3125/cs422-assignment-4/blob/main/topology.py}
+
+\title{CS 422 Assignment 4 \\ Part 2: Arbitrary Traffic Matrix}
+\author{Kush, Joseph, Issac}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Main idea}
+
+In Part 1 every pair sent the same amount, so the best I could do was make every node close to
+every other node. Here the traffic matrix $T$ is given, and some pairs send a lot more than others.
+So the topology should depend on $T$: pairs with a lot of traffic should get direct links (even more
+than one link), and pairs with little traffic can share capacity over 2 or more hops.
+
+Choosing the links and routing the flow depend on each other, so I put both into one integer
+program. For each given $T$, I solve it, and the solution gives the links to build. Since the solver
+looks at every possible topology and routing and returns the best one, the topology it gives is the
+one that maximizes concurrent flow for that $T$. Here $n = 8$ and $d = 4$.
+
+\section*{Formulation}
+
+\paragraph{Decision variables.}
+\begin{itemize}
+  \item $x_{uv} \in \{0, 1, \dots, 4\}$ (integer), for $u \neq v$: number of links from $u$ to $v$.
+        More than one link between the same pair is allowed.
+  \item $f^s_{uv} \ge 0$: amount of flow from source $s$ that goes over link $u \rightarrow v$.
+  \item $\theta \ge 0$: the fraction of every demand that gets delivered.
+\end{itemize}
+
+\paragraph{Objective.}
+\[
+\max \ \theta
+\]
+
+\paragraph{Constraints.}
+\begin{enumerate}
+  \item \textbf{Degree:} every node has 4 links out and 4 links in.
+  \[
+  \sum_{v \neq u} x_{uv} = 4, \qquad \sum_{v \neq u} x_{vu} = 4 \qquad \forall u
+  \]
+  \item \textbf{Flow conservation:} source $s$ sends $\theta \cdot T_{st}$ to every destination $t$.
+  \[
+  \sum_{v} f^s_{sv} - \sum_{v} f^s_{vs} = \theta \sum_{t} T_{st} \qquad \forall s
+  \]
+  \[
+  \sum_{v} f^s_{vw} - \sum_{v} f^s_{wv} = \theta \, T_{sw} \qquad \forall s, \ \forall w \neq s
+  \]
+  \item \textbf{Capacity:} each link has capacity 1, so the total flow on $u \rightarrow v$ is at
+        most the number of links there.
+  \[
+  \sum_{s} f^s_{uv} \le x_{uv} \qquad \forall u \neq v
+  \]
+\end{enumerate}
+
+I group flow by source instead of by (source, destination) pair. The flow from $s$ only needs to
+drop off $\theta T_{st}$ at each $t$, so this is enough and uses fewer variables.
+
+\section*{Why this works}
+
+\begin{itemize}
+  \item The degree constraints make sure $x$ is a valid topology (4 links in and out per node).
+  \item The flow and capacity constraints make sure the traffic $\theta T$ can actually be routed on
+        that topology.
+  \item The solver maximizes $\theta$ over all valid topologies and routings together, so the answer
+        is the best topology for this $T$. It adapts to $T$ because $T$ shows up in the flow
+        conservation constraints, so a different $T$ gives different links.
+  \item The intuition shows up in the results: big entries of $T$ get direct links, and
+        if $T$ is something like $4 \times$ a permutation, the solver just builds those links and gets
+        $\theta = 1$.
+\end{itemize}
+
+\section*{Implementation (Gurobi)}
+
+Code: \url{\code}
+\begin{itemize}
+  \item \href{\code\#L11-L49}{\texttt{best\_topology(T)}}: builds and solves the integer program
+        and returns $\theta$ and the links.
+  \item \href{\code\#L18-L23}{Variables} $x$, $f$, $\theta$;
+        \href{\code\#L25}{objective};
+        \href{\code\#L27-L30}{degree constraints};
+        \href{\code\#L32-L40}{flow conservation};
+        \href{\code\#L42-L44}{capacity}.
+  \item \href{\code\#L52-L63}{\texttt{random\_hose\_tm()}}: makes a random hose traffic matrix (a random
+        mix of permutations, scaled by 4) for testing.
+\end{itemize}
+
+\section*{Results}
+
+\begin{center}
+\begin{tabular}{l|c}
+traffic matrix & best $\theta$ \\ \hline
+uniform ($\frac{4}{7}$ to every pair) & 0.700 \\
+random hose \#0 & 0.875 \\
+random hose \#1 & 0.861 \\
+random hose \#2 & 0.827 \\
+\end{tabular}
+\end{center}
+
+For the uniform matrix the solver gets $0.700$. This matches Part 1: with $d = 4$, each node can
+reach 4 nodes in 1 hop and the other 3 in 2 hops, so the average path length is $10/7$ and
+$\theta \le 7/10$. The random matrices get higher $\theta$ because their traffic is concentrated on
+fewer pairs, so more of it can go over direct links.
+
+\end{document}
