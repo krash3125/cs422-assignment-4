@@ -1,0 +1,85 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+
+\title{CS 422 Assignment 4 \\ Part 1: Uniform Traffic Matrix}
+\author{Kush, Joseph, Issac}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Main idea}
+
+Every node sends $\frac{d}{n-1}$ to each of the other $n-1$ nodes, so each node sends $d$ in total
+and the whole network has to carry $nd$. The network also has exactly $nd$ capacity ($n$ nodes,
+$d$ links each, capacity 1). So the demand fits only if every flow takes 1 hop. A flow that takes
+2 hops uses 2 units of capacity, a flow that takes 3 hops uses 3, and so on. This gives
+\[
+\theta \cdot \frac{d}{n-1} \sum_{s \neq t} \text{dist}(s,t) \le nd
+\quad\Longrightarrow\quad
+\theta \le \frac{1}{\text{average shortest path length}}
+\]
+So to maximize concurrent flow, I need a topology where the average number of hops is as small
+as possible.
+
+\section*{How short can paths be?}
+
+From any node, with $d$ outgoing links I can reach at most $d$ nodes in 1 hop, at most $d^2$ in
+2 hops, $d^3$ in 3 hops, and so on. So the best possible graph spreads out like a tree, where
+every hop multiplies the number of nodes I can reach by $d$ and no paths overlap. This gives a
+lower bound on the average path length, and so an upper bound on $\theta$.
+
+\section*{My topology}
+
+To get this tree-like spreading, I think of each node as a number in base $d$. Each node connects
+to the nodes I get by shifting its digits left and adding a new last digit. Every hop adds one
+digit, so I can reach any node in about $\log_d n$ hops. Written with $\bmod\ n$ so it works for
+any $n$:
+
+\begin{enumerate}
+  \item For every node $i = 0, \dots, n-1$ and every $j = 1, \dots, d$, add a link
+        $i \rightarrow (-d \cdot i - j) \bmod n$.
+        (The minus sign just relabels the nodes; it gives fewer self-loops.)
+  \item If some node $a$ has a link to itself, pick another link $u \rightarrow v$ (not touching
+        $a$, and where $u \rightarrow a$ and $a \rightarrow v$ do not already exist) and replace
+        $a \rightarrow a$ and $u \rightarrow v$ with $u \rightarrow a$ and $a \rightarrow v$.
+        Every node still has $d$ links in and $d$ links out.
+\end{enumerate}
+
+\section*{Why this is the best}
+
+\begin{itemize}
+  \item $\theta$ is limited only by how many hops the flows take, so the best topology is the one with
+        the shortest average path.
+  \item My graph grows by about a factor of $d$ every hop, so every node is about $\log_d n$ hops
+        from every other node. That is the same as the tree bound above, the best any graph can do.
+  \item A perfect tree, where no paths ever overlap, is impossible for $d \ge 2$ (directed Moore
+        graphs do not exist). So no topology reaches the bound exactly, and the best possible
+        topology is one that gets as close as it can. I checked my graph for all $n < 120$ with
+        $d \mid n-1$, and its average path length was always within about 14\% of the bound.
+\end{itemize}
+
+\section*{Example: $n = 9$, $d = 2$}
+
+Node $i$ links to $(-2i-1) \bmod 9$ and $(-2i-2) \bmod 9$:
+
+\begin{center}
+\begin{tabular}{c|c}
+node & links to \\ \hline
+0 & 8, 7 \\
+1 & 6, 5 \\
+2 & 4, 3 \\
+3 & 2, 1 \\
+4 & 0, 8 \\
+5 & 7, 6 \\
+6 & 5, 4 \\
+7 & 3, 2 \\
+8 & 1, 0 \\
+\end{tabular}
+\end{center}
+
+Average path length is $2.17$, and the best possible is $2.0$, so $\theta \le 1/2.17 \approx 0.46$,
+close to the best possible $0.5$.
+
+\end{document}
