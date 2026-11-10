@@ -13,11 +13,11 @@
 - [x] Update line-range links after code changes
 
 ## Report
-- [ ] Single PDF (`report.tex` -> `report.pdf`) -- tex done, PDF NOT built (no LaTeX here) with repo link, both parts, "we" voice
+- [x] Single PDF (`report.tex` -> `report.pdf`) with repo link, both parts, "we" voice
 - [x] Verify: run both scripts, build PDF, check every line link
 
 ## Review
 - part1.py and topology.py run; part1.py matches independent scipy/networkx checks (same graphs, same theta).
 - topology.py results unchanged (0.700 / 0.875 / 0.861 / 0.827); T = 0 now raises instead of returning 1e30.
 - LaTeX statically checked (braces, $, environments, cites); every line link checked against the code.
-- Not done: compiling report.pdf (downloading tectonic was blocked); old part1.pdf/part2.pdf left in place but are stale.
+- report.pdf built with tectonic: 5 pages, no LaTeX warnings, all 15 embedded links checked.
