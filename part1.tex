@@ -35,7 +35,7 @@ $M = 2 + 8 + 6 = 16$ and $\theta \le 8/16 = 0.5$.
 To get close to this tree-like spreading, we think of each node as a number in base $d$. Each node
 connects to the nodes we get by shifting its digits left and adding a new last digit. Every hop adds
 one digit, so any node can be reached in about $\log_d n$ hops. Written with $\bmod\ n$ so it works
-for any $n$, this is the Imase--Itoh graph~\cite{imase}:
+for any $n$, this is the Imase--Itoh graph (Imase \& Itoh, 1983):
 
 \begin{enumerate}
   \item For every node $i = 0, \dots, n-1$ and every $j = 1, \dots, d$, add a link
@@ -53,7 +53,7 @@ Why this is a valid topology:
         node $v$ and each $j$ there is exactly one $i$ with $-d \cdot i - j \equiv v$.
   \item Node $i$ links to itself only when $(d+1)\,i \equiv -j \pmod n$, which holds for at most one
         $j$, so each node has at most one self-loop. Step 2 removes them (a self-loop wastes a link).
-  \item Before step 2, the Imase--Itoh graph has diameter at most $\lceil \log_d n \rceil$~\cite{imase},
+  \item Before step 2, the Imase--Itoh graph has diameter at most $\lceil \log_d n \rceil$ (Imase \& Itoh),
         which is as small as the Moore bound allows (up to rounding).
   \item When $n = d + 1$, $-d \equiv 1 \pmod n$, so node $i$ links to $i-1, \dots, i-d$, which is every
         other node. This is the complete graph, every flow takes 1 hop, and $\theta = 1$ is optimal.
@@ -90,37 +90,11 @@ topology gets $0.488$, compared with our $0.364$.
 
 \paragraph{Why we do not claim exact optimality.} The upper bound cannot always be reached. When
 $n = 1 + d + \dots + d^k$ (for example $n = 7$, $d = 2$), reaching it would need a directed Moore
-graph, and these do not exist for $d \ge 2$, $k \ge 2$~\cite{moore}. In those cases the true optimum
+graph, and these do not exist for $d \ge 2$, $k \ge 2$ (Bridges \& Toueg, 1980). In those cases the true optimum
 has no known formula (for $n = 7$, $d = 2$ the integer program finds $6/11$). For other $n$ the
 bound can be reached exactly (Part 2's uniform case, $n = 8$, $d = 4$, gets $0.7$), but the best
 topologies the solver finds for small $n$ are irregular graphs with no pattern we could generalize.
-Finding the exactly optimal topology for every $n$ and $d$ is an open problem. The usual approach
-in the literature is the one we use: a low-diameter graph compared against the upper
-bound~\cite{singla, mars}.
-
-\subsection*{Example: $n = 9$, $d = 2$}
-
-Node $i$ links to $(-2i-1) \bmod 9$ and $(-2i-2) \bmod 9$ (no self-loops occur here):
-
-\begin{center}
-\begin{tabular}{c|c}
-node & links to \\ \hline
-0 & 8, 7 \\
-1 & 6, 5 \\
-2 & 4, 3 \\
-3 & 2, 1 \\
-4 & 0, 8 \\
-5 & 7, 6 \\
-6 & 5, 4 \\
-7 & 3, 2 \\
-8 & 1, 0 \\
-\end{tabular}
-\end{center}
-
-The average path length is $2.17$ against the best possible $2.0$, so this graph can reach at most
-$1/2.17 \approx 0.46$. Because the load is not perfectly balanced, the exact maximum concurrent flow
-is $0.364$. The upper bound for any topology is $0.5$, and the best topology found by the solver
-gets $0.488$.
+Finding the exactly optimal topology for every $n$ and $d$ is an open problem.
 
 \subsection*{Implementation}
 
