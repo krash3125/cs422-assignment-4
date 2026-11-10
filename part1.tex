@@ -1,68 +1,106 @@
-\documentclass[11pt]{article}
-\usepackage[margin=1in]{geometry}
-\usepackage{amsmath}
+\section{Part 1: Uniform Traffic Matrix}
 
-\title{CS 422 Assignment 4 \\ Part 1: Uniform Traffic Matrix}
-\author{Kush, Joseph, Issac}
-\date{}
-
-\begin{document}
-\maketitle
-
-\section*{Main idea}
+\subsection*{Main idea}
 
 Every node sends $\frac{d}{n-1}$ to each of the other $n-1$ nodes, so each node sends $d$ in total
 and the whole network has to carry $nd$. The network also has exactly $nd$ capacity ($n$ nodes,
-$d$ links each, capacity 1). So the demand fits only if every flow takes 1 hop. A flow that takes
-2 hops uses 2 units of capacity, a flow that takes 3 hops uses 3, and so on. This gives
+$d$ links each, capacity 1). A flow that takes 1 hop uses 1 unit of capacity per unit of traffic, a
+flow that takes 2 hops uses 2, and so on. This gives
 \[
 \theta \cdot \frac{d}{n-1} \sum_{s \neq t} \text{dist}(s,t) \le nd
 \quad\Longrightarrow\quad
 \theta \le \frac{1}{\text{average shortest path length}}
 \]
-So to maximize concurrent flow, I need a topology where the average number of hops is as small
-as possible.
+So a good topology needs two things:
+\begin{enumerate}
+  \item \textbf{Short paths:} the average number of hops should be as small as possible.
+  \item \textbf{Balanced load:} the bound above is only reached if every link is fully used. If
+        some links are busier than others, the busiest link limits $\theta$ before the rest are full.
+\end{enumerate}
 
-\section*{How short can paths be?}
+\subsection*{How short can paths be? (upper bound for any topology)}
 
-From any node, with $d$ outgoing links I can reach at most $d$ nodes in 1 hop, at most $d^2$ in
-2 hops, $d^3$ in 3 hops, and so on. So the best possible graph spreads out like a tree, where
-every hop multiplies the number of nodes I can reach by $d$ and no paths overlap. This gives a
-lower bound on the average path length, and so an upper bound on $\theta$.
+From any node, with $d$ outgoing links we can reach at most $d$ nodes in 1 hop, at most $d^2$ in
+2 hops, $d^3$ in 3 hops, and so on (the Moore bound). Let $M(n,d)$ be the hop total we get by filling
+these levels in order until all $n-1$ other nodes are placed. No node can do better, so for
+\emph{every} topology
+\[
+\theta \le \frac{n-1}{M(n,d)}.
+\]
+For example, with $n = 9$, $d = 2$: 2 nodes at 1 hop, 4 at 2 hops, 2 at 3 hops, so
+$M = 2 + 8 + 6 = 16$ and $\theta \le 8/16 = 0.5$.
 
-\section*{My topology}
+\subsection*{Our topology}
 
-To get this tree-like spreading, I think of each node as a number in base $d$. Each node connects
-to the nodes I get by shifting its digits left and adding a new last digit. Every hop adds one
-digit, so I can reach any node in about $\log_d n$ hops. Written with $\bmod\ n$ so it works for
-any $n$:
+To get close to this tree-like spreading, we think of each node as a number in base $d$. Each node
+connects to the nodes we get by shifting its digits left and adding a new last digit. Every hop adds
+one digit, so any node can be reached in about $\log_d n$ hops. Written with $\bmod\ n$ so it works
+for any $n$, this is the Imase--Itoh graph~\cite{imase}:
 
 \begin{enumerate}
   \item For every node $i = 0, \dots, n-1$ and every $j = 1, \dots, d$, add a link
         $i \rightarrow (-d \cdot i - j) \bmod n$.
-        (The minus sign just relabels the nodes; it gives fewer self-loops.)
   \item If some node $a$ has a link to itself, pick another link $u \rightarrow v$ (not touching
         $a$, and where $u \rightarrow a$ and $a \rightarrow v$ do not already exist) and replace
         $a \rightarrow a$ and $u \rightarrow v$ with $u \rightarrow a$ and $a \rightarrow v$.
         Every node still has $d$ links in and $d$ links out.
 \end{enumerate}
 
-\section*{Why this is the best}
-
+Why this is a valid topology:
 \begin{itemize}
-  \item $\theta$ is limited only by how many hops the flows take, so the best topology is the one with
-        the shortest average path.
-  \item My graph grows by about a factor of $d$ every hop, so every node is about $\log_d n$ hops
-        from every other node. That is the same as the tree bound above, the best any graph can do.
-  \item A perfect tree, where no paths ever overlap, is impossible for $d \ge 2$ (directed Moore
-        graphs do not exist). So no topology reaches the bound exactly, and the best possible
-        topology is one that gets as close as it can. I checked my graph for all $n < 120$ with
-        $d \mid n-1$, and its average path length was always within about 14\% of the bound.
+  \item Every node has $d$ links out by construction. It also has $d$ links in: since $d \mid n-1$,
+        $d$ and $n$ share no factor, so $i \mapsto -d \cdot i \bmod n$ is a one-to-one map. For any
+        node $v$ and each $j$ there is exactly one $i$ with $-d \cdot i - j \equiv v$.
+  \item Node $i$ links to itself only when $(d+1)\,i \equiv -j \pmod n$, which holds for at most one
+        $j$, so each node has at most one self-loop. Step 2 removes them (a self-loop wastes a link).
+  \item Before step 2, the Imase--Itoh graph has diameter at most $\lceil \log_d n \rceil$~\cite{imase},
+        which is as small as the Moore bound allows (up to rounding).
+  \item When $n = d + 1$, $-d \equiv 1 \pmod n$, so node $i$ links to $i-1, \dots, i-d$, which is every
+        other node. This is the complete graph, every flow takes 1 hop, and $\theta = 1$ is optimal.
 \end{itemize}
 
-\section*{Example: $n = 9$, $d = 2$}
+\subsection*{How close to optimal is it?}
 
-Node $i$ links to $(-2i-1) \bmod 9$ and $(-2i-2) \bmod 9$:
+We checked our topology with \href{\code/part1.py\#L72-L95}{\texttt{part1.py}}:
+\begin{itemize}
+  \item \textbf{Short paths:} for every $n < 120$ with $d \mid n-1$, step 2 always succeeds, every
+        node has $d$ links in and out, and the average path length is at most 14.1\% above the
+        Moore bound (worst case $n = 15$, $d = 2$).
+  \item \textbf{Balanced load:} short paths alone are not enough. Our graph is not symmetric, so
+        some links carry more traffic than others. We solved the exact maximum concurrent flow (a
+        linear program) on our topology:
+\end{itemize}
+
+\begin{center}
+\begin{tabular}{cc|c|c|c|c}
+$n$ & $d$ & avg.\ path length & $\theta$ of our topology & upper bound (any topology) & ratio \\ \hline
+9  & 2 & 2.167 & 0.364 & 0.500 & 72.7\% \\
+13 & 3 & 1.955 & 0.500 & 0.571 & 87.5\% \\
+16 & 3 & 2.167 & 0.417 & 0.500 & 83.3\% \\
+17 & 4 & 1.835 & 0.500 & 0.571 & 87.5\% \\
+21 & 4 & 1.993 & 0.497 & 0.556 & 89.5\% \\
+25 & 3 & 2.418 & 0.405 & 0.421 & 96.1\% \\
+\end{tabular}
+\end{center}
+
+So our topology is \textbf{near-optimal, not provably optimal}. The ratio is measured against the
+upper bound, so the true gap to the best topology can only be smaller. For example, for $n = 9$,
+$d = 2$ the Part 2 integer program (run with the uniform matrix) finds that the best possible
+topology gets $0.488$, compared with our $0.364$.
+
+\paragraph{Why we do not claim exact optimality.} The upper bound cannot always be reached. When
+$n = 1 + d + \dots + d^k$ (for example $n = 7$, $d = 2$), reaching it would need a directed Moore
+graph, and these do not exist for $d \ge 2$, $k \ge 2$~\cite{moore}. In those cases the true optimum
+has no known formula (for $n = 7$, $d = 2$ the integer program finds $6/11$). For other $n$ the
+bound can be reached exactly (Part 2's uniform case, $n = 8$, $d = 4$, gets $0.7$), but the best
+topologies the solver finds for small $n$ are irregular graphs with no pattern we could generalize.
+Finding the exactly optimal topology for every $n$ and $d$ is an open problem. The usual approach
+in the literature is the one we use: a low-diameter graph compared against the upper
+bound~\cite{singla, mars}.
+
+\subsection*{Example: $n = 9$, $d = 2$}
+
+Node $i$ links to $(-2i-1) \bmod 9$ and $(-2i-2) \bmod 9$ (no self-loops occur here):
 
 \begin{center}
 \begin{tabular}{c|c}
@@ -79,7 +117,19 @@ node & links to \\ \hline
 \end{tabular}
 \end{center}
 
-Average path length is $2.17$, and the best possible is $2.0$, so $\theta \le 1/2.17 \approx 0.46$,
-close to the best possible $0.5$.
+The average path length is $2.17$ against the best possible $2.0$, so this graph can reach at most
+$1/2.17 \approx 0.46$. Because the load is not perfectly balanced, the exact maximum concurrent flow
+is $0.364$. The upper bound for any topology is $0.5$, and the best topology found by the solver
+gets $0.488$.
 
-\end{document}
+\subsection*{Implementation}
+
+Code: \url{\code/part1.py}
+\begin{itemize}
+  \item \href{\code/part1.py\#L7-L17}{\texttt{build\_topology(n, d)}}: steps 1 and 2 above.
+  \item \href{\code/part1.py\#L20-L36}{\texttt{path\_length\_sum}} and
+        \href{\code/part1.py\#L39-L47}{\texttt{moore\_sum}}: average path length of our graph and
+        the Moore bound.
+  \item \href{\code/part1.py\#L50-L69}{\texttt{concurrent\_flow}}: exact $\theta$ on a fixed topology
+        (Gurobi linear program).
+\end{itemize}

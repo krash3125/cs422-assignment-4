@@ -44,6 +44,8 @@ def best_topology(T, n=N, d=D):
         m.addConstr(gp.quicksum(f[s, u, v] for s in range(n)) <= x[u, v])
 
     m.optimize()
+    if m.Status != GRB.OPTIMAL:  # e.g. T = 0 makes theta unbounded
+        raise RuntimeError(f"no optimal topology (Gurobi status {m.Status})")
 
     links = {(u, v): round(x[u, v].X) for u, v in pairs if x[u, v].X > 0.5}
     return theta.X, links

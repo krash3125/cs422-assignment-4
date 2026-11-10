@@ -1,30 +1,18 @@
-\documentclass[11pt]{article}
-\usepackage[margin=1in]{geometry}
-\usepackage{amsmath}
-\usepackage{hyperref}
+\section{Part 2: Arbitrary Traffic Matrix}
 
-\newcommand{\code}{https://github.com/krash3125/cs422-assignment-4/blob/main/topology.py}
+\subsection*{Main idea}
 
-\title{CS 422 Assignment 4 \\ Part 2: Arbitrary Traffic Matrix}
-\author{Kush, Joseph, Issac}
-\date{}
-
-\begin{document}
-\maketitle
-
-\section*{Main idea}
-
-In Part 1 every pair sent the same amount, so the best I could do was make every node close to
+In Part 1 every pair sent the same amount, so the best we could do was make every node close to
 every other node. Here the traffic matrix $T$ is given, and some pairs send a lot more than others.
 So the topology should depend on $T$: pairs with a lot of traffic should get direct links (even more
 than one link), and pairs with little traffic can share capacity over 2 or more hops.
 
-Choosing the links and routing the flow depend on each other, so I put both into one integer
-program. For each given $T$, I solve it, and the solution gives the links to build. Since the solver
+Choosing the links and routing the flow depend on each other, so we put both into one integer
+program. For each given $T$, we solve it, and the solution gives the links to build. Since the solver
 looks at every possible topology and routing and returns the best one, the topology it gives is the
 one that maximizes concurrent flow for that $T$. Here $n = 8$ and $d = 4$.
 
-\section*{Formulation}
+\subsection*{Formulation}
 
 \paragraph{Decision variables.}
 \begin{itemize}
@@ -59,10 +47,10 @@ one that maximizes concurrent flow for that $T$. Here $n = 8$ and $d = 4$.
   \]
 \end{enumerate}
 
-I group flow by source instead of by (source, destination) pair. The flow from $s$ only needs to
+We group flow by source instead of by (source, destination) pair. The flow from $s$ only needs to
 drop off $\theta T_{st}$ at each $t$, so this is enough and uses fewer variables.
 
-\section*{Why this works}
+\subsection*{Why this works}
 
 \begin{itemize}
   \item The degree constraints make sure $x$ is a valid topology (4 links in and out per node).
@@ -74,24 +62,26 @@ drop off $\theta T_{st}$ at each $t$, so this is enough and uses fewer variables
   \item The intuition shows up in the results: big entries of $T$ get direct links, and
         if $T$ is something like $4 \times$ a permutation, the solver just builds those links and gets
         $\theta = 1$.
+  \item If $T = 0$ (allowed by the hose model) there is nothing to route and $\theta$ is unbounded;
+        the code reports this instead of returning a number.
 \end{itemize}
 
-\section*{Implementation (Gurobi)}
+\subsection*{Implementation (Gurobi)}
 
-Code: \url{\code}
+Code: \url{\code/topology.py}
 \begin{itemize}
-  \item \href{\code\#L11-L49}{\texttt{best\_topology(T)}}: builds and solves the integer program
-        and returns $\theta$ and the links.
-  \item \href{\code\#L18-L23}{Variables} $x$, $f$, $\theta$;
-        \href{\code\#L25}{objective};
-        \href{\code\#L27-L30}{degree constraints};
-        \href{\code\#L32-L40}{flow conservation};
-        \href{\code\#L42-L44}{capacity}.
-  \item \href{\code\#L52-L63}{\texttt{random\_hose\_tm()}}: makes a random hose traffic matrix (a random
-        mix of permutations, scaled by 4) for testing.
+  \item \href{\code/topology.py\#L11-L51}{\texttt{best\_topology(T)}}: builds and solves the integer
+        program and returns $\theta$ and the links.
+  \item \href{\code/topology.py\#L18-L23}{Variables} $x$, $f$, $\theta$;
+        \href{\code/topology.py\#L25}{objective};
+        \href{\code/topology.py\#L27-L30}{degree constraints};
+        \href{\code/topology.py\#L32-L40}{flow conservation};
+        \href{\code/topology.py\#L42-L44}{capacity}.
+  \item \href{\code/topology.py\#L54-L65}{\texttt{random\_hose\_tm()}}: makes a random hose traffic
+        matrix (a random mix of permutations, scaled by 4) for testing.
 \end{itemize}
 
-\section*{Results}
+\subsection*{Results}
 
 \begin{center}
 \begin{tabular}{l|c}
@@ -103,9 +93,7 @@ random hose \#2 & 0.827 \\
 \end{tabular}
 \end{center}
 
-For the uniform matrix the solver gets $0.700$. This matches Part 1: with $d = 4$, each node can
-reach 4 nodes in 1 hop and the other 3 in 2 hops, so the average path length is $10/7$ and
-$\theta \le 7/10$. The random matrices get higher $\theta$ because their traffic is concentrated on
-fewer pairs, so more of it can go over direct links.
-
-\end{document}
+For the uniform matrix the solver gets $0.700$. This matches the Part 1 upper bound: with $d = 4$,
+each node can reach 4 nodes in 1 hop and the other 3 in 2 hops, so the average path length is at
+least $10/7$ and $\theta \le 7/10$. Here the bound is reached exactly. The random matrices get higher
+$\theta$ because their traffic is concentrated on fewer pairs, so more of it can go over direct links.
